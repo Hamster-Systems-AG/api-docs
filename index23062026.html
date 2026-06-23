@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hamster Platform API — API Reference</title>
+<style>
+  html, body { margin: 0; padding: 0; height: 100%; background: #fff; }
+  #scalar-root { height: 100vh; width: 100%; }
+  #scalar-loading {
+    position: fixed; inset: 0; display: flex; align-items: center; justify-content: center;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13px;
+    color: #6b7280; letter-spacing: 0.04em;
+  }
+</style>
+</head>
+<body>
+<div id="scalar-loading">loading API reference…</div>
+<div id="scalar-root"></div>
+<script src="https://cdn.jsdelivr.net/npm/@scalar/api-reference"></script>
+<script>
+  var SPEC_URL = 'https://hamster-systems-ag.github.io/api-docs/hamster_combined_openapi_23-06-2026.json';
+  var SEP = '\u203a';
+
+  function groupByService(spec) {
+    var tags = (spec && spec.tags) || [];
+    var order = [];
+    var groups = {};
+    tags.forEach(function (t) {
+      var name = t.name;
+      var svc = name.indexOf(SEP) !== -1 ? name.split(SEP)[0].trim() : name.trim();
+      if (!groups[svc]) { groups[svc] = []; order.push(svc); }
+      groups[svc].push(name);
+    });
+    spec['x-tagGroups'] = order.map(function (svc) {
+      var names = groups[svc].slice().sort(function (a, b) {
+        return a === svc ? -1 : b === svc ? 1 : 0;
+      });
+      return { name: svc, tags: names };
+    });
+    return spec;
+  }
+
+  function mount(content) {
+    var tries = 0;
+    (function init() {
+      if (window.Scalar && window.Scalar.createApiReference) {
+        window.Scalar.createApiReference('#scalar-root', {
+          content: content,
+          theme: 'kepler',
+          layout: 'modern',
+          showSidebar: true
+        });
+        var l = document.getElementById('scalar-loading');
+        if (l) l.style.display = 'none';
+        return;
+      }
+      if (tries++ < 200) setTimeout(init, 100);
+    })();
+  }
+
+  fetch(SPEC_URL)
+    .then(function (r) { return r.json(); })
+    .then(function (spec) { mount(groupByService(spec)); })
+    .catch(function (err) {
+      var l = document.getElementById('scalar-loading');
+      if (l) l.textContent = 'Failed to load spec: ' + err.message;
+    });
+</script>
+</body>
+</html>
